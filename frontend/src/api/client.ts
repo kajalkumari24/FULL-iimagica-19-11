@@ -11,7 +11,8 @@ import type {
   LogoPalette,
 } from '../types';
 
-const API_URL = 'http://127.0.0.1:8000/api';
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+const API_URL = API_BASE.endsWith('/api') ? API_BASE : `${API_BASE}/api`;
 
 export async function checkHealth(): Promise<{ status: string }> {
   const res = await fetch(`${API_URL}/health`);
