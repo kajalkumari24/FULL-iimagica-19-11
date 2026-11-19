@@ -8,3 +8,4 @@ if str(backend_dir) not in sys.path:
 
 # Import the actual FastAPI application from backend/app/main.py
 from backend.app.main import app
+
