@@ -12,7 +12,7 @@ from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, RedirectResponse
 from pydantic import BaseModel
 
 from app.models.brand import BrandProfile
@@ -108,7 +108,12 @@ class PositionOptionsRequest(BaseModel):
     poster_width: float = 1080.0
     poster_height: float = 1080.0
 
-# ===== Health =================================================================
+# ===== Root & Health ==========================================================
+@app.get("/")
+def root():
+    return RedirectResponse(url="/docs")
+
+@app.get("/health")
 @app.get("/api/health")
 def health():
     return {"status": "ok", "service": "ai-footer-designer"}
