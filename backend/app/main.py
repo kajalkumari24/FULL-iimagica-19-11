@@ -12,7 +12,7 @@ from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import StreamingResponse, RedirectResponse
+from fastapi.responses import StreamingResponse, RedirectResponse, FileResponse
 from pydantic import BaseModel
 
 from app.models.brand import BrandProfile
@@ -41,6 +41,7 @@ from app.engine.color_theme_engine import color_theme_engine
 BASE_DIR = Path(__file__).resolve().parent.parent  # backend/
 UPLOADS_DIR = BASE_DIR / "uploads"
 DATA_DIR = BASE_DIR / "data"
+FRONTEND_DIST = BASE_DIR.parent / "frontend" / "dist"
 
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -61,6 +62,10 @@ app.add_middleware(
 # Static file serving for uploads
 if UPLOADS_DIR.exists():
     app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+
+# Mount frontend assets if prebuilt dist exists
+if (FRONTEND_DIST / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets")), name="frontend-assets")
 
 # ---------------------------------------------------------------------------
 # Singletons
@@ -109,8 +114,11 @@ class PositionOptionsRequest(BaseModel):
     poster_height: float = 1080.0
 
 # ===== Root & Health ==========================================================
-@app.get("/")
+@app.get("/", include_in_schema=False)
 def root():
+    index_file = FRONTEND_DIST / "index.html"
+    if index_file.is_file():
+        return FileResponse(str(index_file))
     return RedirectResponse(url="/docs")
 
 @app.get("/health")
@@ -421,3 +429,21 @@ def delete_brand(brand_id: str):
     if not ok:
         raise HTTPException(status_code=404, detail="Brand not found")
     return {"deleted": True}
+
+# ===== SPA Catch-All Route ====================================================
+if FRONTEND_DIST.exists():
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        # Do not intercept API, health, or Swagger documentation routes
+        if full_path.startswith("api/") or full_path in ["docs", "openapi.json", "redoc", "health"]:
+            raise HTTPException(status_code=404, detail="Not Found")
+        
+        target = FRONTEND_DIST / full_path
+        if target.is_file():
+            return FileResponse(str(target))
+        
+        index_file = FRONTEND_DIST / "index.html"
+        if index_file.is_file():
+            return FileResponse(str(index_file))
+        raise HTTPException(status_code=404, detail="Frontend index.html not found")
+

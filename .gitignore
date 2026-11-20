@@ -5,7 +5,9 @@ node_modules/
 # Production build outputs
 dist/
 build/
-*/dist/
+# Allow prebuilt frontend dist so Render serves the full React Studio UI out of the box
+!frontend/dist/
+!frontend/dist/**
 
 # Python cache & virtual environments
 __pycache__/
